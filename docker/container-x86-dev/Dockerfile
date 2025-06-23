@@ -38,7 +38,9 @@ RUN git clone --depth 1 -b 'v1.2.5' https://github.com/Livox-SDK/Livox-SDK2.git 
   cmake .. && \
   make -j$(nproc) && \
   make install && \
-  ldconfig
+  ldconfig && \
+  cd .. && \
+  rm -rf build
 WORKDIR /root
 # dafn25_mid360_driver END #
 # IMAGE SETUP END #
