@@ -7,6 +7,7 @@ endif()
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
@@ -15,6 +16,8 @@ file(GLOB MSG_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${MSG_DIR}/*.msg")
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${MSG_FILES}
+  DEPENDENCIES
+  std_msgs
 )
 
 ament_package()
