@@ -1,0 +1,5 @@
+# Request: 1 = enable, 0 = disable
+int32 command
+---
+# Response: true se l’operazione è andata a buon fine
+bool success

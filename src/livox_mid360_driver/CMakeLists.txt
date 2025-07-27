@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.10)
+message(STATUS ">>> Loading CMakeLists from: ${CMAKE_CURRENT_LIST_FILE}")
+
+cmake_minimum_required(VERSION 3.8)
 project(livox_mid360_driver)
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
@@ -17,53 +19,79 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+add_subdirectory(
+  ${CMAKE_CURRENT_LIST_DIR}/../Livox-SDK2   # path al CMakeLists.txt del SDK2
+  sdk2_build                                # cartella di build dedicata
+)
+
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(dua_qos_cpp REQUIRED)
-find_package(livox_lidar_interfaces REQUIRED)
-find_package(params_manager_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclcpp_components REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
+find_package(livox_lidar_interfaces REQUIRED)
+#aggiungo
+find_package(ament_index_cpp REQUIRED)
+find_package(sensor_msgs REQUIRED)       
 
-# Build standalone application
-#! You have to rearrange this to build the node as a component later
-add_executable(livox_mid360_driver
-  src/livox_mid360_driver.cpp)
-target_include_directories(livox_mid360_driver PUBLIC
+
+
+# Server
+add_executable(server src/livox_mid360_driver_server.cpp)
+target_include_directories(server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
-target_compile_features(livox_mid360_driver PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
-target_link_libraries(livox_mid360_driver
-  livox_lidar_sdk_shared)
-ament_target_dependencies(livox_mid360_driver
-  dua_qos_cpp
-  livox_lidar_interfaces
-  params_manager_cpp
+  $<INSTALL_INTERFACE:include>
+  ${CMAKE_CURRENT_LIST_DIR}/../Livox-SDK2/include
+  )
+ament_target_dependencies(
+  server
   rclcpp
-  rclcpp_components
+  livox_lidar_interfaces
+  ament_index_cpp 
   sensor_msgs
-  std_msgs
-  std_srvs
+  )
+
+target_link_libraries(server
+    livox_lidar_sdk_static
+    ament_index_cpp::ament_index_cpp 
 )
 
-# Install standalone application
-install(TARGETS livox_mid360_driver
+# Client
+add_executable(client src/livox_mid360_driver_client.cpp)
+target_include_directories(client PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${CMAKE_CURRENT_LIST_DIR}/../Livox-SDK2/include)
+
+ament_target_dependencies(
+  client
+  rclcpp
+  livox_lidar_interfaces
+  ament_index_cpp
+  sensor_msgs) 
+
+target_link_libraries(client
+    livox_lidar_sdk_static
+    ament_index_cpp::ament_index_cpp     
+)
+# Install executables
+install(TARGETS server
   DESTINATION lib/${PROJECT_NAME})
+install(TARGETS client
+  DESTINATION lib/${PROJECT_NAME})
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
+  # uncomment the line when a copyright and license is not present in all source files
+  #set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
+  # uncomment the line when this package is not in a git repo
+  #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 

@@ -14,8 +14,12 @@ find_package(rosidl_default_generators REQUIRED)
 set(MSG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/msg")
 file(GLOB MSG_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${MSG_DIR}/*.msg")
 
+set(SRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srv")
+file(GLOB SRV_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SRV_DIR}/*.srv")
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${MSG_FILES}
+  ${SRV_FILES}
   DEPENDENCIES
   std_msgs
 )
