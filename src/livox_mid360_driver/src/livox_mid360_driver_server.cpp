@@ -20,58 +20,13 @@ static constexpr int PUB_PERIOD_MS_INFO =1000;
 //aggiungo 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <string>
-
-/*
-void QueryInternalInfoCallback(livox_status status, uint32_t handle, 
-    LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
-      printf("\n\n\n Query: ");
-  if (status != kLivoxLidarStatusSuccess) {
-    printf("Query lidar internal info failed.\n");
-    QueryLivoxLidarInternalInfo(handle, QueryInternalInfoCallback, nullptr);
-    return;
-  }
-
-  if (response == nullptr) {
-    return;
-  }
-
-  uint8_t host_point_ipaddr[4] {0};
-  uint16_t host_point_port = 0;
-  uint16_t lidar_point_port = 0;
-
-  uint8_t host_imu_ipaddr[4] {0};
-  uint16_t host_imu_data_port = 0;
-  uint16_t lidar_imu_data_port = 0;
-
-  uint16_t off = 0;
-  for (uint8_t i = 0; i < response->param_num; ++i) {
-    LivoxLidarKeyValueParam* kv = (LivoxLidarKeyValueParam*)&response->data[off];
-    if (kv->key == kKeyLidarPointDataHostIpCfg) {
-      memcpy(host_point_ipaddr, &(kv->value[0]), sizeof(uint8_t) * 4);
-      memcpy(&(host_point_port), &(kv->value[4]), sizeof(uint16_t));
-      memcpy(&(lidar_point_port), &(kv->value[6]), sizeof(uint16_t));
-    } else if (kv->key == kKeyLidarImuHostIpCfg) {
-      memcpy(host_imu_ipaddr, &(kv->value[0]), sizeof(uint8_t) * 4);
-      memcpy(&(host_imu_data_port), &(kv->value[4]), sizeof(uint16_t));
-      memcpy(&(lidar_imu_data_port), &(kv->value[6]), sizeof(uint16_t));
-    }
-    off += sizeof(uint16_t) * 2;
-    off += kv->length;
-  }
-
-  printf("Host point cloud ip addr:%u.%u.%u.%u, host point cloud port:%u, lidar point cloud port:%u.\n",
-      host_point_ipaddr[0], host_point_ipaddr[1], host_point_ipaddr[2], host_point_ipaddr[3], host_point_port, lidar_point_port);
-
-  printf("Host imu ip addr:%u.%u.%u.%u, host imu port:%u, lidar imu port:%u.\n",
-    host_imu_ipaddr[0], host_imu_ipaddr[1], host_imu_ipaddr[2], host_imu_ipaddr[3], host_imu_data_port, lidar_imu_data_port);
-
-}*/
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "livox_lidar_def.h"  // contiene LivoxLidarKeyValueParam
 
 
+// Funzioni helper: converte la chiave in stringa
 const char* DeviceTypeToString(LivoxLidarDeviceType type) {
   switch (type) {
     case kLivoxLidarTypeHub: return "Hub";
@@ -88,7 +43,6 @@ const char* DeviceTypeToString(LivoxLidarDeviceType type) {
   }
 }
 
-// Funzione helper: converte la chiave in stringa
 const char* ParamKeyToString(uint16_t key) {
   switch (key) {
     case kKeyPclDataType: return "kKeyPclDataType";
@@ -139,6 +93,8 @@ const char* ParamKeyToString(uint16_t key) {
     default: return "Unknown Key";
   }
 }
+
+//Tipo del framework 
 void QueryFwTypeCallback(livox_status status, uint32_t handle,
                          LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
   if (status != kLivoxLidarStatusSuccess || response == nullptr) {
@@ -157,6 +113,7 @@ void QueryFwTypeCallback(livox_status status, uint32_t handle,
   printf("Device Type: %s (%d)\n", DeviceTypeToString(type), type);
 }
 
+//versione del framework
 void QueryFwVersionCallback(livox_status status, uint32_t handle,
                             LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
   if (status != kLivoxLidarStatusSuccess || response == nullptr) return;
@@ -170,6 +127,7 @@ void QueryFwVersionCallback(livox_status status, uint32_t handle,
   }
 }
 
+//Informazioni interne
 void QueryInternalInfoCallback(livox_status status, uint32_t handle,
                                LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
   if (status != kLivoxLidarStatusSuccess || response == nullptr) return;
@@ -193,7 +151,6 @@ void QueryInternalInfoCallback(livox_status status, uint32_t handle,
 
 
 void WorkModeCallback(livox_status status, uint32_t handle,LivoxLidarAsyncControlResponse *response, void *client_data) {
-  printf("\n\n\n *** Sei entrato in work mode *** \n");
   if (response == nullptr) {
     return;
   }
@@ -222,19 +179,19 @@ void LoggerStartCallback(livox_status status, uint32_t handle, LivoxLidarLoggerR
 
   printf("The lidar[%u] start logger succ.\n", handle);
 }
+
+//Non abbiamo capito come funziona l'api che la richiama (Forse si attiva solo con pacchetti specifici)
 void PushMsgCallback(const uint32_t handle, const uint8_t dev_type, const char* info, void* client_data) {
-  printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
   auto self = static_cast<Mid360_Server*>(client_data);
   struct in_addr tmp_addr;
   tmp_addr.s_addr = handle;  
-  printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-  printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
 
   //copio dati struct 
   self->info_addr = tmp_addr;
   self->info_livox = info;
   return;
 }
+
 
 void LivoxLidarAsyncControlClbk(livox_status status, uint32_t handle, LivoxLidarAsyncControlResponse *response, void *client_data)
 {
@@ -243,24 +200,35 @@ void LivoxLidarAsyncControlClbk(livox_status status, uint32_t handle, LivoxLidar
 }
 
 void LidarInfoChangeCallback(const uint32_t handle, const LivoxLidarInfo* info, void* client_data) {
-  printf("\n\n\n *** Sei entrato in lidar info change *** \n");
   if (info == nullptr) {
     printf("lidar info change callback failed, the info is nullptr.\n");
     return;
   } 
-  printf("LidarInfoChangeCallback Lidar handle: %u SN: %s\n", handle, info->sn);
+  printf("LidarInfoChangeCallback Lidar handle: %u SN: %s\n", handle, info->sn); //stampa handle e numero di serie
+  
+  // Imposta il LiDAR in modalità di lavoro normale
   SetLivoxLidarWorkMode(handle, kLivoxLidarNormal, WorkModeCallback, nullptr);
-  //logger abilitato. Stampa tante cose
+  
+  //logger disabilitato.
   LivoxLidarStartLogger(handle, kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+
+  //Richiede parametri di configurazione 
   QueryLivoxLidarInternalInfo(handle, QueryInternalInfoCallback, nullptr);
+  
+  // Richiede il tipo di firmware 
   QueryLivoxLidarFwType(handle, QueryFwTypeCallback, nullptr);
+
+  // Richiede la versione di firmware 
   QueryLivoxLidarFirmwareVer(handle, QueryFwVersionCallback, nullptr);
+  
+  // Imposta la callback PushMsgCallback per ricevere messaggi dal LiDAR
   SetLivoxLidarInfoCallback(PushMsgCallback, nullptr);
 
+  //(Forse) setta il modo
   LivoxLidarPointDataType pointDataType = kLivoxLidarCartesianCoordinateHighData;
   //LivoxLidarPointDataType pointDataType = kLivoxLidarSphericalCoordinateData;
   //LivoxLidarPointDataType pointDataType = kLivoxLidarCartesianCoordinateLowData;
-  SetLivoxLidarPclDataType(handle, pointDataType , LivoxLidarAsyncControlClbk , nullptr);
+  //SetLivoxLidarPclDataType(handle, pointDataType , LivoxLidarAsyncControlClbk , nullptr);
   
 
 }
@@ -275,58 +243,7 @@ void RebootCallback(livox_status status, uint32_t handle, LivoxLidarRebootRespon
 
 
 
-/*
-void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEthernetPacket* data, void* client_data) {
-  if (data == nullptr) {
-    return;
-  }
-  auto self = static_cast<Mid360_Server*>(client_data);
 
-  if(self->handlePc2 != handle){
-    self->handlePc2 = handle;
-    
-  }
-
-
-  
-  
-  //printf("\n\n HandlePc2 in Callback= %d \n\n",self->handlePc2);
-
-  //printf("point cloud handle: %u, data_num: %d, data_type: %d, length: %d, frame_counter: %d\n",
-  //   handle, data->dot_num, data->data_type, data->length, data->frame_cnt);
-
-  self->num_punti = data->dot_num;
-
-  if (data->data_type == kLivoxLidarCartesianCoordinateHighData) {
-    LivoxLidarCartesianHighRawPoint *p_point_data = (LivoxLidarCartesianHighRawPoint *)data->data;
-    for (uint32_t i = 0; i < data->dot_num; i++) {
-      p_point_data[i].x;
-      p_point_data[i].y;
-      p_point_data[i].z;
-
-     //printf("data[%d]: x:%d , y=%d , z=%d \n",i,p_point_data[i].x,p_point_data[i].y,p_point_data[i].z);
-    }
-
-    self->last_point = p_point_data;
-  }
-  else if (data->data_type == kLivoxLidarCartesianCoordinateLowData) {
-    LivoxLidarCartesianLowRawPoint *p_point_data = (LivoxLidarCartesianLowRawPoint *)data->data;
-    for (uint32_t i = 0; i < data->dot_num; i++) {
-      p_point_data[i].x;
-      p_point_data[i].y;
-      p_point_data[i].z;
-
-      //printf("data[%d]: x:%d , y=%d , z=%d \n",i,p_point_data[i].x,p_point_data[i].y,p_point_data[i].z);
-    }
-
-
-  } else if (data->data_type == kLivoxLidarSphericalCoordinateData) {
-    LivoxLidarSpherPoint* p_point_data = (LivoxLidarSpherPoint *)data->data;
-
-  }
-
-}
-*/
 void PointCloudCallback(uint32_t handle, const uint8_t dev_type,
                         LivoxLidarEthernetPacket* data, void* client_data) {
   if (!data) return;
@@ -375,26 +292,7 @@ void ImuDataCallback(uint32_t handle, const uint8_t dev_type,  LivoxLidarEtherne
  //   handle, data->dot_num, data->data_type, data->length, data->frame_cnt);
 
   LivoxLidarImuRawPoint *p_point_data_imu = (LivoxLidarImuRawPoint *)data->data;
-    //formato dati
-  /*
-    p_point_data_imu[1].gyro_x;
-    p_point_data_imu[1].gyro_y;
-    p_point_data_imu[1].gyro_z;
-    p_point_data_imu[1].acc_x;
-    p_point_data_imu[1].acc_y;
-    p_point_data_imu[1].acc_z;
-  */
-
-   //printf("\n\n");
-   /*printf("data_imu: gyro_x:%f , gyro_y=%f , gyro_z=%f , acc_x:%f ,acc_y:%f ,acc_z:%f \n",
-    p_point_data_imu[1].gyro_x,
-    p_point_data_imu[1].gyro_y,
-    p_point_data_imu[1].gyro_z,
-    p_point_data_imu[1].acc_x,
-    p_point_data_imu[1].acc_y,
-    p_point_data_imu[1].acc_z);*/
-
-   //printf("\n\n");
+   
   
   auto self = static_cast<Mid360_Server*>(client_data);
 
@@ -434,19 +332,19 @@ Mid360_Server::Mid360_Server()
     "/msg_MID360/INFO", rclcpp::QoS(10));
   RCLCPP_INFO(this->get_logger(), "Publisher LivoxInfo avviato");
 
-  // 6) Timer per pubblicazione periodica (se ti serve)
+  // 6) Timer PC2
   pub_timer_ = this->create_wall_timer(
     std::chrono::milliseconds(PUB_PERIOD_MS),
     std::bind(&Mid360_Server::on_pub_timer, this));
   RCLCPP_INFO(this->get_logger(), "Timer di publish impostato a %d ms", PUB_PERIOD_MS);
   
-  // 6) Timer per pubblicazione periodica (se ti serve)
+  // 6) Timer IMU
   pub_timer_IMU_ = this->create_wall_timer(
     std::chrono::milliseconds(PUB_PERIOD_MS_IMU),
     std::bind(&Mid360_Server::on_pub_timer_IMU, this));
   RCLCPP_INFO(this->get_logger(), "Timer di publish IMU impostato a %d ms", PUB_PERIOD_MS_IMU);
 
-  // 6) Timer per pubblicazione periodica (se ti serve)
+  // 6) Timer INFO
   pub_timer_INFO_ = this->create_wall_timer(
     std::chrono::milliseconds(PUB_PERIOD_MS_INFO),
     std::bind(&Mid360_Server::on_pub_timer_INFO, this));
@@ -490,20 +388,6 @@ void Mid360_Server::Mid360_Enable_Disable_clbk(
     //version
     this->Version = new LivoxLidarSdkVer;
     GetLivoxLidarSdkVer(this->Version);
-    //DeviceType
-    LivoxLidarDeviceType DeviceType = kLivoxLidarTypeMid360;
-    //PointDataType 
-    LivoxLidarPointDataType pointDataType;
-    livox_status statusDataType;
-
-
-    //printf("\n\n HandlePc2 = %d \n\n",this->handlePc2);
-    //statusDataType = SetLivoxLidarPclDataType(this->handlePc2, pointDataType , LivoxLidarAsyncControlClbk,this);
-    
-    //printf("\n\nLivox Status = %d\n\n",statusDataType);
-    //printf("\n\nDeviceType kLivoxLidarTypeMid360= %d\n\n", DeviceType);
-    //printf("\n\nVersione SDK-> major:%d  minor:%d   patch:%d\n\n", this->Version->major, this->Version->minor, this->Version->patch);
-
     //info change
     SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, this);
 
@@ -609,152 +493,6 @@ void Mid360_Server::on_pub_timer() {
   pc2_pub_->publish(pc2_msg);
   this->frame_ready_ = false;
 }
-/*
-void Mid360_Server::on_pub_timer() {
-  // Se non ci sono punti o il puntatore è nullo, non pubblichiamo
-  if (this->last_point == nullptr || this->num_punti == 0)
-    return;
-
-  sensor_msgs::msg::PointCloud2 pc2_msg;
-
-  // Header
-  pc2_msg.header.stamp = this->now();
-  pc2_msg.header.frame_id = "map";
-  pc2_msg.height = 1;
-  pc2_msg.width  = this->num_punti;
-
-  // Definizione dei campi
-  pc2_msg.fields.resize(5);
-
-  pc2_msg.fields[0].name = "x";
-  pc2_msg.fields[0].offset = 0;
-  pc2_msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
-  pc2_msg.fields[0].count = 1;
-
-  pc2_msg.fields[1].name = "y";
-  pc2_msg.fields[1].offset = 4;
-  pc2_msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
-  pc2_msg.fields[1].count = 1;
-
-  pc2_msg.fields[2].name = "z";
-  pc2_msg.fields[2].offset = 8;
-  pc2_msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
-  pc2_msg.fields[2].count = 1;
-
-  pc2_msg.fields[3].name = "reflectivity";
-  pc2_msg.fields[3].offset = 12;
-  pc2_msg.fields[3].datatype = sensor_msgs::msg::PointField::UINT8;
-  pc2_msg.fields[3].count = 1;
-
-  pc2_msg.fields[4].name = "tag";
-  pc2_msg.fields[4].offset = 13;
-  pc2_msg.fields[4].datatype = sensor_msgs::msg::PointField::UINT8;
-  pc2_msg.fields[4].count = 1;
-
-  // Layout PointCloud2
-  pc2_msg.is_bigendian = false;
-  pc2_msg.point_step   = 3 * sizeof(float) + 2 * sizeof(uint8_t); // 14 bytes
-  pc2_msg.row_step     = pc2_msg.point_step * pc2_msg.width;
-  pc2_msg.is_dense     = true;
-
-  pc2_msg.data.resize(pc2_msg.row_step);
-
-  // Riempimento dei dati
-  for (size_t i = 0; i < this->num_punti; ++i) {
-    LivoxLidarCartesianHighRawPoint p = this->last_point[i];
-
-    float x = p.x * 0.001f; // mm → m
-    float y = p.y * 0.001f;
-    float z = p.z * 0.001f;
-
-    uint8_t reflectivity = p.reflectivity;
-    uint8_t tag = p.tag;
-
-    uint8_t* ptr = &pc2_msg.data[i * pc2_msg.point_step];
-
-    memcpy(ptr + 0, &x, sizeof(float));
-    memcpy(ptr + 4, &y, sizeof(float));
-    memcpy(ptr + 8, &z, sizeof(float));
-    memcpy(ptr + 12, &reflectivity, sizeof(uint8_t));
-    memcpy(ptr + 13, &tag, sizeof(uint8_t));
-  }
-
-  // Pubblica il messaggio
-  pc2_pub_->publish(pc2_msg);
-}
-*/
-
-/*
-void Mid360_Server::on_pub_timer()
-{
-  std::vector<int32_t> x_vals{0};
-  std::vector<int32_t> y_vals{0};
-  std::vector<int32_t> z_vals{0};
-  std::vector<uint8_t> reflectivity_vals{0};
-  std::vector<uint8_t> tag_vals{0};
-  sensor_msgs::msg::PointCloud2 pc2_msg;
-
-  //1) campi
-  pc2_msg.header.stamp = this->now();
-  pc2_msg.header.frame_id = "map";
-  pc2_msg.height = 1;
-  pc2_msg.width  = this->num_punti;
-
-  //printf("\n**************dot_num PC2 = %u*****************\n",this->num_punti);
-
-  // 1) Preparo esattamente 5 campi
-  pc2_msg.fields.resize(5);
-
-  // 2) Imposto manualmente ciascun elemento
-  pc2_msg.fields[0].name     = "x";
-  pc2_msg.fields[0].offset   = 0;
-  pc2_msg.fields[0].datatype = sensor_msgs::msg::PointField::INT32;
-  pc2_msg.fields[0].count    = 1;
-
-  pc2_msg.fields[1].name     = "y";
-  pc2_msg.fields[1].offset   = 4;
-  pc2_msg.fields[1].datatype = sensor_msgs::msg::PointField::INT32;
-  pc2_msg.fields[1].count    = 1;
-
-  pc2_msg.fields[2].name     = "z";
-  pc2_msg.fields[2].offset   = 8;
-  pc2_msg.fields[2].datatype = sensor_msgs::msg::PointField::INT32;
-  pc2_msg.fields[2].count    = 1;
-
-  pc2_msg.fields[3].name     = "reflectivity";
-  pc2_msg.fields[3].offset   = 12;
-  pc2_msg.fields[3].datatype = sensor_msgs::msg::PointField::UINT8;
-  pc2_msg.fields[3].count    = 1;
-
-  pc2_msg.fields[4].name     = "tag";
-  pc2_msg.fields[4].offset   = 13;
-  pc2_msg.fields[4].datatype = sensor_msgs::msg::PointField::UINT8;
-  pc2_msg.fields[4].count    = 1;
-
-
-  // 3) parametri layout
-  pc2_msg.is_bigendian = false;
-  pc2_msg.point_step   = sizeof(int32_t)*3 + sizeof(uint8_t)*2; // 14
-  pc2_msg.row_step     = pc2_msg.point_step * pc2_msg.width;   // 14 * 96
-  pc2_msg.is_dense     = true;
-
-  pc2_msg.data.resize(pc2_msg.row_step);
-
-  // 4) Riempio gli elementi 
-  for (size_t i = 0; i < pc2_msg.width; ++i) {
-    uint8_t* ptr = &pc2_msg.data[i * pc2_msg.point_step];
-
-    memcpy(ptr + 0,  &x_vals[i], sizeof(int32_t));
-    memcpy(ptr + 4,  &y_vals[i], sizeof(int32_t));
-    memcpy(ptr + 8,  &z_vals[i], sizeof(int32_t));
-    memcpy(ptr + 12, &reflectivity_vals[i], sizeof(uint8_t));
-    memcpy(ptr + 13, &tag_vals[i], sizeof(uint8_t));
-  }
-
-  //Pubblicazione
-  pc2_pub_->publish(pc2_msg);
-
-}*/
 
 
 void Mid360_Server::on_pub_timer_IMU()
