@@ -30,12 +30,7 @@ Mid360_Client::Mid360_Client() : Node("client")
     std::bind(&Mid360_Client::imuCallback, this, std::placeholders::_1));
   RCLCPP_INFO(this->get_logger(), "Subscription IMU avviata");
 
-  // --- Subscription LivoxInfo ---
-  info_sub_ = this->create_subscription<livox_lidar_interfaces::msg::LivoxInfo>(
-    "/msg_MID360/INFO",
-    rclcpp::QoS(10),
-    std::bind(&Mid360_Client::infoCallback, this, std::placeholders::_1));
-  RCLCPP_INFO(this->get_logger(), "Subscription LivoxInfo avviata");
+
 }
 
 void Mid360_Client::Enable_Disable_srv(int cmd)
@@ -120,31 +115,7 @@ void Mid360_Client::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg_IMU)
     msg_IMU->linear_acceleration.z);
 }
 
-void Mid360_Client::infoCallback(
-  const livox_lidar_interfaces::msg::LivoxInfo::SharedPtr msg)
-{
-  RCLCPP_DEBUG(this->get_logger(), "Ricevuto LivoxInfo, model=");
-  RCLCPP_INFO(this->get_logger(), "******** STAMPA INFO ********");
-  /*
-  RCLCPP_INFO(this->get_logger(), 
-    "serial number = %s , ip_address = %s",,
-    msg->serial_number.c_str(),
-    msg->lidar_ip_address.c_str());*/
-    
-  RCLCPP_INFO(this->get_logger(),
-  "serial_number = %s, ip_address = %s, device_type = %d, point_data_type = %s, scan_pattern = %s, frame_rate = %d, work_mode = %s",
-    msg->serial_number.c_str(),
-    msg->lidar_ip_address.c_str(),
-    msg->device_type,
-    msg->point_data_type.c_str(),
-    msg->scan_pattern.c_str(),
-    msg->frame_rate,
-    msg->work_mode.c_str()
-  );
 
-
-  // … processa msg …
-}
 
 int main(int argc, char ** argv)
 {
@@ -158,10 +129,10 @@ int main(int argc, char ** argv)
 
     if (cmd == 1) {
         std::cout << "Hai scelto ENABLE.\n";
-        // qui chiami LivoxLidarSdkInitEnable()…
+
     } else if (cmd == 0)  {
         std::cout << "Hai scelto DISABLE.\n";
-        // qui chiami LivoxLidarSdkInitDisable()…
+
     } else if (cmd == 2)  {
 
         std::string cmdline =
@@ -173,12 +144,7 @@ int main(int argc, char ** argv)
         std::cout << "Hai scelto lettura dati PC2.\n";
         auto sub_node = std::make_shared<Mid360_Client>();
         rclcpp::spin(sub_node);
-    }else if (cmd == 3){
-      
-    
-    }else if (cmd == 4){
-      
-    }else if (cmd == 5){}
+    }
 
   
 
