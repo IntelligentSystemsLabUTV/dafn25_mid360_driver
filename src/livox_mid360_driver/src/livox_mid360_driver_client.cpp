@@ -67,6 +67,8 @@ void Mid360_Client::Enable_Disable_srv(int cmd)
 
 void Mid360_Client::pc2Callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg_PC2)
 {
+
+  
   RCLCPP_INFO(this->get_logger(), "Ricevuto PointCloud2 - frame: %s, dimensioni: %ux%u",
               msg_PC2->header.frame_id.c_str(), msg_PC2->height, msg_PC2->width);
   // stampa 
@@ -80,7 +82,7 @@ void Mid360_Client::pc2Callback(const sensor_msgs::msg::PointCloud2::SharedPtr m
               );
   size_t N = std::size_t (msg_PC2->width);
 
-  RCLCPP_INFO(this->get_logger(), "******** STAMPA POINT CLOUD ********");
+  //RCLCPP_INFO(this->get_logger(), "******** STAMPA POINT CLOUD ********");
 
   for (size_t i = 0; i < N; ++i) {
     const uint8_t* ptr = &msg_PC2->data[i * msg_PC2->point_step];
@@ -94,10 +96,11 @@ void Mid360_Client::pc2Callback(const sensor_msgs::msg::PointCloud2::SharedPtr m
     memcpy(&reflectivity, ptr + 12, sizeof(uint8_t));
     memcpy(&tag, ptr + 13, sizeof(uint8_t));
 
-    RCLCPP_INFO(this->get_logger(), 
+    /*RCLCPP_INFO(this->get_logger(), 
       "[%zu] x: %d, y: %d, z: %d, reflectivity: %u, tag: %u", 
-      i, x, y, z, reflectivity, tag);
+      i, x, y, z, reflectivity, tag);*/
   }
+  
 
 }
 
@@ -122,41 +125,67 @@ void Mid360_Client::infoCallback(
 {
   RCLCPP_DEBUG(this->get_logger(), "Ricevuto LivoxInfo, model=");
   RCLCPP_INFO(this->get_logger(), "******** STAMPA INFO ********");
+  /*
   RCLCPP_INFO(this->get_logger(), 
-    "serial number = %s , ip_address = %s",
+    "serial number = %s , ip_address = %s",,
     msg->serial_number.c_str(),
-    msg->lidar_ip_address.c_str());
+    msg->lidar_ip_address.c_str());*/
+    
+  RCLCPP_INFO(this->get_logger(),
+  "serial_number = %s, ip_address = %s, device_type = %d, point_data_type = %s, scan_pattern = %s, frame_rate = %d, work_mode = %s",
+    msg->serial_number.c_str(),
+    msg->lidar_ip_address.c_str(),
+    msg->device_type,
+    msg->point_data_type.c_str(),
+    msg->scan_pattern.c_str(),
+    msg->frame_rate,
+    msg->work_mode.c_str()
+  );
+
 
   // … processa msg …
 }
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto client_node = std::make_shared<Mid360_Client>();
-
   int cmd = -1;
-  std::cout << "Inserisci comando: 1 (enable), 0 (disable), 2 (lettura dati): ";
-  std::cin >> cmd;
+    std::cout << "Inserisci 1 (enable) o 0 (disable) o 2(lettura dati PC2): ";
+    if (!(std::cin >> cmd) || (cmd != 0 && cmd != 1 && cmd != 2 && cmd != 3 && cmd != 4 && cmd != 5)) {
+        std::cerr << "Input non valido. Devi inserire solo 0 e 1 e 2 e 3.\n";
+    }
 
-  if (cmd != 0 && cmd != 1 && cmd != 2) {
-    std::cerr << "Input non valido. Ammessi solo 0, 1 o 2.\n";
-    rclcpp::shutdown();
-    return EXIT_FAILURE;
-  }
+    if (cmd == 1) {
+        std::cout << "Hai scelto ENABLE.\n";
+        // qui chiami LivoxLidarSdkInitEnable()…
+    } else if (cmd == 0)  {
+        std::cout << "Hai scelto DISABLE.\n";
+        // qui chiami LivoxLidarSdkInitDisable()…
+    } else if (cmd == 2)  {
 
-  if (cmd == 2) {
-    std::cout << "Hai scelto lettura dati PointCloud/IMU.\n";
-    rclcpp::spin(client_node);
-  } else {
-    if (cmd == 1)
-      std::cout << "Hai scelto ENABLE.\n";
-    else
-      std::cout << "Hai scelto DISABLE.\n";
+        std::string cmdline =
+          "gnome-terminal -- bash -c '"
+          "source install/local_setup.bash &&"
+          "ros2 run livox_mid360_driver client; "
+          "exec bash'";
+        system(cmdline.c_str());
+        std::cout << "Hai scelto lettura dati PC2.\n";
+        auto sub_node = std::make_shared<Mid360_Client>();
+        rclcpp::spin(sub_node);
+    }else if (cmd == 3){
+      
+    
+    }else if (cmd == 4){
+      
+    }else if (cmd == 5){}
 
-    client_node->Enable_Disable_srv(cmd);
-  }
+  
 
+  //! Note: this time we don't spin, we just call a method offered by the node
+  client_node->Enable_Disable_srv(cmd);
+
+  // Just exit
   rclcpp::shutdown();
-  return EXIT_SUCCESS;
+  exit(EXIT_SUCCESS);
 }

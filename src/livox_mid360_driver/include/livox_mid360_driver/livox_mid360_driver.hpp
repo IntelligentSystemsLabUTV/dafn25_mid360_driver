@@ -16,6 +16,44 @@
 #include <arpa/inet.h>
 #include <vector>
 
+
+struct LidarInternalParams {
+  std::string serial_number;
+  std::string product_info;
+  std::string mac_address;
+
+  std::string version_app;
+  std::string version_loader;
+  std::string version_hw;
+
+  std::string ip;
+  std::string mask;
+  std::string gateway;
+
+  uint8_t work_mode = 0;
+  uint8_t imu_enabled = 0;
+
+  float temperature = 0.0f;
+  uint32_t powerup_count = 0;
+
+  uint64_t local_time = 0;
+  uint64_t last_sync_time = 0;
+};
+
+struct info_msg{
+
+   LivoxLidarSdkVer sdk_version;
+   LivoxLidarInfo lidar_info;
+   //LivoxLidarDeviceType device_type;
+   std::string device_type_str;
+   int device_type_int;
+   LivoxLidarPointDataType point_data_type;
+   LivoxLidarScanPattern scan_pattern;
+   LivoxLidarPointFrameRate point_frame_rate;
+   LivoxLidarWorkMode work_mode;
+
+};
+
 // Alias per comodità: evita di ripetere il namespace completo ogni volta
 using MsgEnableDisable = livox_lidar_interfaces::srv::MsgEnableDisable;
 
@@ -46,8 +84,14 @@ public:
   std::vector<LivoxLidarCartesianHighRawPoint> frame_buffer_;
   uint8_t current_frame_cnt_{255}; // valore iniziale "impossibile"
   bool frame_ready_{false};
+  // Dichiara la struttura PRIMA della classe
+
+  info_msg send_info_msg;
+
+  LidarInternalParams last_params_{};
 
 private:
+
 
 
   /// Handle al servizio ROS2 (shared pointer)
@@ -78,6 +122,11 @@ private:
   void on_pub_timer_INFO();
   
 };
+
+
+
+
+
 
 /**
  * @brief Nodo client che invia comandi di abilitazione/disabilitazione

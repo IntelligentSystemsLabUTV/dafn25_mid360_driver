@@ -13,9 +13,9 @@
 #include <vector>
 
 
-static constexpr int PUB_PERIOD_MS =1;
-static constexpr int PUB_PERIOD_MS_IMU =1000;
-static constexpr int PUB_PERIOD_MS_INFO =1000;
+static constexpr int PUB_PERIOD_MS =5;
+static constexpr int PUB_PERIOD_MS_IMU =7000;
+static constexpr int PUB_PERIOD_MS_INFO =11000;
 
 //aggiungo 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -94,6 +94,7 @@ const char* ParamKeyToString(uint16_t key) {
   }
 }
 
+
 //Tipo del framework 
 void QueryFwTypeCallback(livox_status status, uint32_t handle,
                          LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
@@ -110,7 +111,15 @@ void QueryFwTypeCallback(livox_status status, uint32_t handle,
   // Il tipo è nel primo byte della risposta
   LivoxLidarDeviceType type = static_cast<LivoxLidarDeviceType>(response->data[0]);
 
-  printf("Device Type: %s (%d)\n", DeviceTypeToString(type), type);
+  auto self = static_cast<Mid360_Server*>(client_data);
+  self->send_info_msg.device_type_str = DeviceTypeToString(type);
+  self->send_info_msg.device_type_int = type;
+  
+  printf("\n\n****LIVOX_LIDAR_DEVICE_TYPE (inizio)****\n\n");
+  //printf("Device Type: %s (%d)\n", DeviceTypeToString(type), type);
+  printf("Device Type: %s (%d)\n", self->send_info_msg.device_type_str, self->send_info_msg.device_type_int);
+  printf("\n\n****LIVOX_LIDAR_DEVICE_TYPE (fine)****\n\n");
+  
 }
 
 //versione del framework
@@ -126,8 +135,120 @@ void QueryFwVersionCallback(livox_status status, uint32_t handle,
     printf("Firmware Version: %d.%d.%d\n", major, minor, patch);
   }
 }
+//codifica parametri key
 
+void DecodeParam(const LivoxLidarKeyValueParam* kv,void* client_data) {
+  printf("\nKey: %s (0x%04X)\n", ParamKeyToString(kv->key), kv->key);
+
+  switch (kv->key) {
+    case 0x8000: // Serial Number
+    case 0x8001: // Product Info
+      printf("Value (string): %.*s\n", kv->length, kv->value);
+      break;
+
+    case 0x8002: // App Version
+    case 0x8003: // Loader Version
+    case 0x8004: // Hardware Version
+      printf("Version: %u.%u.%u.%u\n",
+             kv->value[0], kv->value[1], kv->value[2], kv->value[3]);
+      break;
+
+    case 0x0004: // Lidar IP Config
+    {
+      const uint8_t* v = kv->value;
+      printf("IP: %u.%u.%u.%u  Mask: %u.%u.%u.%u  GW: %u.%u.%u.%u\n",
+             v[0], v[1], v[2], v[3],
+             v[4], v[5], v[6], v[7],
+             v[8], v[9], v[10], v[11]);
+      break;
+    }
+
+    case 0x0005:
+    case 0x0006:
+    case 0x0007:
+    {
+      const uint8_t* v = kv->value;
+      printf("IP: %u.%u.%u.%u  Port1: 0x%02X%02X  Port2: 0x%02X%02X\n",
+             v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+      break;
+    }
+
+    case 0x8005: // MAC
+      printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+             kv->value[0], kv->value[1], kv->value[2],
+             kv->value[3], kv->value[4], kv->value[5]);
+      break;
+
+    case 0x8007: // Temperatura
+    {
+      uint32_t raw;
+      memcpy(&raw, kv->value, sizeof(uint32_t));
+      float temp = raw / 256.0f;
+      printf("Temperature: %.2f °C\n", temp);
+      break;
+    }
+
+    case 0x8008: // Power-Up count
+    {
+      uint32_t cnt;
+      memcpy(&cnt, kv->value, sizeof(uint32_t));
+      printf("Power-Up Count: %u\n", cnt);
+      break;
+    }
+
+    case 0x8009:
+    case 0x800A:
+    case 0x800B:
+    {
+      uint64_t ts;
+      memcpy(&ts, kv->value, sizeof(uint64_t));
+      printf("Timestamp: %llu\n", (unsigned long long)ts);
+      break;
+    }
+
+    case 0x0017: case 0x0018: case 0x001A:
+    case 0x001C: case 0x8006: case 0x800C:
+    case 0x8010:
+      printf("Value: %u\n", kv->value[0]);
+      break;
+
+    default:
+      printf("Value (hex): ");
+      for (int j = 0; j < kv->length; j++) printf("%02X ", kv->value[j]);
+      printf("\n");
+      break;
+  }
+
+  // DATI RICHIESTI
+
+  LivoxLidarSdkVer version;
+  GetLivoxLidarSdkVer(&version);
+
+  auto self = static_cast<Mid360_Server*>(client_data);
+
+  self->send_info_msg.sdk_version = version;
+
+   printf("\n\n****LIVOX_LIDAR_SDK_VERSIONE (inizio)****\n\n");
+   printf("major = %d   minor = %d   patch = %d\n",self->send_info_msg.sdk_version.major,self->send_info_msg.sdk_version.minor,self->send_info_msg.sdk_version.patch);
+   printf("\n\n****LIVOX_LIDAR_SDK_VERSIONE (fine)****\n\n");
+}
 //Informazioni interne
+void QueryInternalInfoCallback(livox_status status, uint32_t handle,
+                               LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
+
+  auto self = static_cast<Mid360_Server*>(client_data);
+
+  if (status != kLivoxLidarStatusSuccess || response == nullptr) return;
+
+  uint16_t off = 0;
+  for (uint8_t i = 0; i < response->param_num; ++i) {
+    auto* kv = reinterpret_cast<LivoxLidarKeyValueParam*>(&response->data[off]);
+    DecodeParam(kv,self);  // Richiama la funzione di decodifica
+    off += sizeof(uint16_t) * 2 + kv->length;
+  }
+}
+
+/*
 void QueryInternalInfoCallback(livox_status status, uint32_t handle,
                                LivoxLidarDiagInternalInfoResponse* response, void* client_data) {
   if (status != kLivoxLidarStatusSuccess || response == nullptr) return;
@@ -148,6 +269,7 @@ void QueryInternalInfoCallback(livox_status status, uint32_t handle,
     off += sizeof(uint16_t) * 2 + kv->length;
   }
 }
+*/
 
 
 void WorkModeCallback(livox_status status, uint32_t handle,LivoxLidarAsyncControlResponse *response, void *client_data) {
@@ -199,6 +321,16 @@ void LivoxLidarAsyncControlClbk(livox_status status, uint32_t handle, LivoxLidar
   return;
 }
 
+
+/*
+void prova1(const uint32_t handle, const LivoxLidarInfo* info, void* client_data) {
+
+
+  LivoxLidarWorkMode work_mode = kLivoxLidarNormal ;
+  SetLivoxLidarWorkMode(handle, work_mode, nullptr, client_data);
+
+}*/
+
 void LidarInfoChangeCallback(const uint32_t handle, const LivoxLidarInfo* info, void* client_data) {
   if (info == nullptr) {
     printf("lidar info change callback failed, the info is nullptr.\n");
@@ -206,23 +338,44 @@ void LidarInfoChangeCallback(const uint32_t handle, const LivoxLidarInfo* info, 
   } 
   printf("LidarInfoChangeCallback Lidar handle: %u SN: %s\n", handle, info->sn); //stampa handle e numero di serie
   
+   auto self = static_cast<Mid360_Server*>(client_data);
+  
+
   // Imposta il LiDAR in modalità di lavoro normale
-  SetLivoxLidarWorkMode(handle, kLivoxLidarNormal, WorkModeCallback, nullptr);
+  SetLivoxLidarWorkMode(handle, kLivoxLidarNormal, WorkModeCallback, self);
   
   //logger disabilitato.
-  LivoxLidarStartLogger(handle, kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+  //LivoxLidarStartLogger(handle, kLivoxLidarRealTimeLog, LoggerStartCallback, self);
 
   //Richiede parametri di configurazione 
-  QueryLivoxLidarInternalInfo(handle, QueryInternalInfoCallback, nullptr);
+  QueryLivoxLidarInternalInfo(handle, QueryInternalInfoCallback, self);
   
   // Richiede il tipo di firmware 
-  QueryLivoxLidarFwType(handle, QueryFwTypeCallback, nullptr);
+  QueryLivoxLidarFwType(handle, QueryFwTypeCallback, self);
 
   // Richiede la versione di firmware 
-  QueryLivoxLidarFirmwareVer(handle, QueryFwVersionCallback, nullptr);
+  QueryLivoxLidarFirmwareVer(handle, QueryFwVersionCallback, self);
   
   // Imposta la callback PushMsgCallback per ricevere messaggi dal LiDAR
-  SetLivoxLidarInfoCallback(PushMsgCallback, nullptr);
+  SetLivoxLidarInfoCallback(PushMsgCallback, self);
+  
+  // DATI PER INFO MSG
+
+  self->send_info_msg.lidar_info = *info;
+  
+  // LivoxDataInfo
+  printf("\n\n****LIVOX_DATA_INFO (inizio)****\n\n");
+  printf("dev_type=%d\n",self->send_info_msg.lidar_info.dev_type);
+  printf("serial_number=%s\n",self->send_info_msg.lidar_info.sn);
+  printf("lidar_ip_address= %s\n",self->send_info_msg.lidar_info.lidar_ip);
+  printf("\n\n****LIVOX_DATA_INFO (fine)****\n\n");
+  
+  // point data type
+  LivoxLidarPointDataType pointDataTypeInfo = kLivoxLidarCartesianCoordinateHighData;
+  self->send_info_msg.point_data_type = pointDataTypeInfo;
+  printf("\n\n****LIVOX_LIDAR_POINT_DATA_TYPE (inizio)****\n\n");
+  printf("Point Data Type (valore numerico): %d\n", (int)self->send_info_msg.point_data_type);
+  printf("\n\n****LIVOX_LIDAR_POINT_DATA_TYPE (fine)****\n\n");
 
   //(Forse) setta il modo
   LivoxLidarPointDataType pointDataType = kLivoxLidarCartesianCoordinateHighData;
@@ -230,7 +383,24 @@ void LidarInfoChangeCallback(const uint32_t handle, const LivoxLidarInfo* info, 
   //LivoxLidarPointDataType pointDataType = kLivoxLidarCartesianCoordinateLowData;
   //SetLivoxLidarPclDataType(handle, pointDataType , LivoxLidarAsyncControlClbk , nullptr);
   
-
+  // scan pattern
+  LivoxLidarScanPattern scanPatternInfo = kLivoxLidarScanPatternNoneRepetive;
+  self->send_info_msg.scan_pattern = scanPatternInfo;
+  printf("\n\n****LIVOX_LIDAR_SCAN_PATTERN (inizio)****\n\n");
+  printf("Scan Pattern (valore numerico): %d\n", (int)self->send_info_msg.scan_pattern);
+  printf("\n\n****LIVOX_LIDAR_SCAN_PATTERN (fine)****\n\n");
+  
+  LivoxLidarPointFrameRate pointFrameRateInfo = kLivoxLidarFrameRate10Hz;
+  self->send_info_msg.point_frame_rate = pointFrameRateInfo;
+  printf("\n\n****LIVOX_LIDAR_FRAME_RATE (inizio)****\n\n");
+  printf("Frame Rate (valore numerico): %d\n", (int)self->send_info_msg.point_frame_rate);
+  printf("\n\n****LIVOX_LIDAR_FRAME_RATE (fine)****\n\n");
+  
+  LivoxLidarWorkMode workModeInfo = kLivoxLidarNormal;
+  self->send_info_msg.work_mode = workModeInfo;
+  printf("\n\n****LIVOX_LIDAR_WORK_MODE (inizio)****\n\n");
+  printf("Work Mode (valore numerico): %d\n", (int)self->send_info_msg.work_mode);
+  printf("\n\n****LIVOX_LIDAR_WORK_MODE (fine)****\n\n");
 }
 
 
@@ -241,12 +411,17 @@ void RebootCallback(livox_status status, uint32_t handle, LivoxLidarRebootRespon
   return;
 }
 
+void prova(const uint32_t handle, const LivoxLidarInfo* info, void* client_data) {
 
+  LivoxLidarRequestReboot(handle, RebootCallback, client_data);
+}
 
 
 void PointCloudCallback(uint32_t handle, const uint8_t dev_type,
                         LivoxLidarEthernetPacket* data, void* client_data) {
+  //printf("\n\nSONO ENTRATO IN PC2\n\n");
   if (!data) return;
+  //printf("\n\nSONO IN PC2 -> \n\n");
 
   auto self = static_cast<Mid360_Server*>(client_data);
 
@@ -266,8 +441,8 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type,
       p_point_data,
       p_point_data + data->dot_num);
 
-  // Se udp_cnt == 0 → inizia un nuovo frame → copio i dati e resetto il buffer
-  if (data->udp_cnt == 0 && !self->frame_buffer_.empty()) {
+  // Se udp_cnt == 0 → inizia un nuovo frame → copio i dati e resetto il buffer (non Funziona, usiamo il modulo)
+  if ((data->udp_cnt % 209) == 0 && !self->frame_buffer_.empty()) {
     self->num_punti = self->frame_buffer_.size();
 
     delete[] self->last_point;
@@ -376,45 +551,83 @@ void Mid360_Server::Mid360_Enable_Disable_clbk(
       printf("Livox Init Failed\n");  // Stampa errore in console se fallisce
       LivoxLidarSdkUninit();         // Pulizia del driver
     }
-    LivoxLidarSdkStart();
+    //LivoxLidarSdkStart();
     
-    
-   //INFO (Serve che il livox mandi un msg non so come )
-   // SetLivoxLidarInfoCallback(PushMsgCallback, this);
+
+    //INFO (Serve che il livox mandi un msg non so come )
+    //SetLivoxLidarInfoCallback(PushMsgCallback, this);
     // pointCloud
     SetLivoxLidarPointCloudCallBack(PointCloudCallback, this);
     // IMU
     SetLivoxLidarImuDataCallback(ImuDataCallback, this);
     //version
     this->Version = new LivoxLidarSdkVer;
-    GetLivoxLidarSdkVer(this->Version);
+    //GetLivoxLidarSdkVer(this->Version);
     //info change
-    SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, this);
+    //SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, this);
+
+    LivoxLidarSdkStart();
+
+
+
+    response->success = true;        // Segnala successo
 
     //distruttore 
     if (this->Version) {
     delete this->Version;
     this->Version = nullptr;
     }
-
-    response->success = true;        // Segnala successo
   }
   else if (request->command == 0) {
     RCLCPP_INFO(get_logger(), "[Service] Disable"); // Log comando di DISABLE
     LivoxLidarSdkUninit();                          // Disattiva il driver Livox
     response->success = true;                       // Segnala successo
   }
-  else if(request->command == 10){
+  else if(request->command == 3){
     RCLCPP_INFO(get_logger(), "[Service] Reboot"); // Log comando di reboot
+    LivoxLidarSdkUninit();  
 
     // invia il reboot
-    RCLCPP_INFO(get_logger(), "[Service] Rebooting lidar handle=%u", handlePc2);
-    LivoxLidarRequestReboot(handlePc2, RebootCallback, this);
+    //RCLCPP_INFO(get_logger(), "[Service] Rebooting lidar handle=%u", handlePc2);
+    SetLivoxLidarInfoChangeCallback(prova, this);
+
+    if (!LivoxLidarSdkInit(cfg_path.c_str())) {
+      printf("Livox Init Failed\n");  // Stampa errore in console se fallisce
+      LivoxLidarSdkUninit();         // Pulizia del driver
+    }
+    LivoxLidarSdkStart();
+
+    // Inizializza il driver Livox con il file di configurazione
+
+
     response->success = true;                       // Segnala successo
 
-  }
+  }else if(request->command == 4){
 
+    /*
+    // invia il reboot
+    //RCLCPP_INFO(get_logger(), "[Service] Rebooting lidar handle=%u", handlePc2);
+    SetLivoxLidarInfoChangeCallback(prova1, this);
+    SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, this);
+
+    // Inizializza il driver Livox con il file di configurazione
+    */
+
+
+    response->success = true;     
+  }else if(request->command == 5){
+    /*
+        if (!LivoxLidarSdkInit(cfg_path.c_str())) {
+      printf("Livox Init Failed\n");  // Stampa errore in console se fallisce
+      LivoxLidarSdkUninit();         // Pulizia del driver
+    }
+    SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, this);
+    */
+    response->success = true;     
+  }
   else {
+
+    printf("\n\n\n******************TEST******************\n\n\n");
     RCLCPP_WARN(get_logger(), "[Service] Comando non valido: %d", request->command);
     response->success = false;                      // Segnala fallimento
   }
@@ -422,6 +635,7 @@ void Mid360_Server::Mid360_Enable_Disable_clbk(
 
 void Mid360_Server::on_pub_timer() {
   // Se non ci sono punti o il puntatore è nullo, non pubblichiamo
+  //printf("\n**************     PC2 PUB     *****************\n");
   if (!this->frame_ready_ || this->last_point == nullptr || this->num_punti == 0)
     return;
 
@@ -489,6 +703,7 @@ void Mid360_Server::on_pub_timer() {
     memcpy(ptr + 13, &tag, sizeof(uint8_t));
   }
 
+  //printf("\n**************     PC2 SEND     *****************\n");
   // Pubblica il messaggio
   pc2_pub_->publish(pc2_msg);
   this->frame_ready_ = false;
@@ -497,7 +712,7 @@ void Mid360_Server::on_pub_timer() {
 
 void Mid360_Server::on_pub_timer_IMU()
 {
-  //printf("\n**************     IMU     *****************\n");
+  //printf("\n**************     IMU SEND     *****************\n");
   float gyro_x = this->gyro[0];
   float gyro_y = this->gyro[1];
   float gyro_z = this->gyro[2];
@@ -532,18 +747,37 @@ void Mid360_Server::on_pub_timer_IMU()
 
 void Mid360_Server::on_pub_timer_INFO()
 {
+  //printf("\n**************     INFO SEND    *****************\n");
 
-  //printf("\n**************     INFO     *****************\n");
   livox_lidar_interfaces::msg::LivoxInfo info_msg;
-
-
-
+  
+  //auto self = static_cast<Mid360_Server*>(client_data);
+  
+  printf("dev_type=%d\n",this->send_info_msg.lidar_info.dev_type);
+  printf("serial_number=%s\n",this->send_info_msg.lidar_info.sn);
+  printf("lidar_ip_address= %s\n",this->send_info_msg.lidar_info.lidar_ip);
+  printf("Point Data Type (valore numerico): %d\n", (int)this->send_info_msg.point_data_type);
+  printf("Scan Pattern (valore numerico): %d\n", (int)this->send_info_msg.scan_pattern);
+  printf("Frame Rate (valore numerico): %d\n", (int)this->send_info_msg.point_frame_rate);
+  printf("Work Mode (valore numerico): %d\n", (int)this->send_info_msg.work_mode);
+  
+  info_msg.serial_number = std::string(this->send_info_msg.lidar_info.sn);
+  info_msg.lidar_ip_address = std::string(this->send_info_msg.lidar_info.lidar_ip);
+  info_msg.device_type = this->send_info_msg.lidar_info.dev_type;
+  info_msg.point_data_type = std::to_string((int)this->send_info_msg.point_data_type);
+  info_msg.scan_pattern = std::to_string((int)this->send_info_msg.scan_pattern);
+  info_msg.frame_rate = (int)this->send_info_msg.point_frame_rate;
+  info_msg.work_mode = std::to_string((int)this->send_info_msg.work_mode);
+  
+  /*
   info_msg.serial_number = this->info_livox ? 
                          std::string(this->info_livox) : 
                          "";
 
   info_msg.lidar_ip_address = (this->info_addr.s_addr != 0) ?
-                            std::string(inet_ntoa(this->info_addr)) : "";
+                            std::string(inet_ntoa(this->info_addr)) : "";*/
+                            
+  //info_msg;
 
 
   //pubblicazione
