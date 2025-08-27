@@ -16,7 +16,12 @@
 #include <arpa/inet.h>
 #include <vector>
 
-;
+
+
+
+void PointCloudCallback(uint32_t handle, const uint8_t dev_type,
+                        LivoxLidarEthernetPacket* data, void* client_data);
+void ImuDataCallback(uint32_t handle, const uint8_t dev_type,  LivoxLidarEthernetPacket* data, void* client_data);
 
 // Alias per comodità: evita di ripetere il namespace completo ogni volta
 using MsgEnableDisable = livox_lidar_interfaces::srv::MsgEnableDisable;
@@ -119,5 +124,6 @@ private:
 
 
 };
+
 
 #endif  // LIVOX_MID360_HPP

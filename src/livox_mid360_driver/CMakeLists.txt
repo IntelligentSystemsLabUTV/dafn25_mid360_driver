@@ -35,9 +35,16 @@ find_package(ament_index_cpp REQUIRED)
 find_package(sensor_msgs REQUIRED)       
 
 
-
 # Server
-add_executable(server src/livox_mid360_driver_server.cpp)
+add_executable(server
+  src/livox_mid360_server/livox_mid360_driver_server_costruttore.cpp
+  src/livox_mid360_driver_server_main.cpp
+  src/livox_mid360_server/livox_mid360_driver_server_services.cpp
+  src/livox_mid360_server/livox_mid360_driver_server_PC2_IMU.cpp
+  src/livox_mid360_timer/livox_mid360_driver_timer.cpp
+
+)
+
 target_include_directories(server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -57,7 +64,13 @@ target_link_libraries(server
 )
 
 # Client
-add_executable(client src/livox_mid360_driver_client.cpp)
+add_executable(client 
+  src/livox_mid360_client/livox_mid360_driver_client_PC2_IMU.cpp
+  src/livox_mid360_client/livox_mid360_driver_client_services.cpp
+  src/livox_mid360_driver_client_main.cpp
+  src/livox_mid360_client/livox_mid360_driver_client_costruttore.cpp
+  src/livox_mid360_timer/livox_mid360_driver_timer.cpp
+)
 target_include_directories(client PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
