@@ -28,5 +28,10 @@ Mid360_Client::Mid360_Client() : Node("client")
     std::bind(&Mid360_Client::imuCallback, this, std::placeholders::_1));
   RCLCPP_INFO(this->get_logger(), "Subscription IMU avviata");
 
-
+  // --- Subscription LivoxInfo ---
+  info_sub_ = this->create_subscription<livox_lidar_interfaces::msg::LivoxInfo>(
+    "/msg_MID360/INFO",
+    rclcpp::QoS(10),
+    std::bind(&Mid360_Client::infoCallback, this, std::placeholders::_1));
+  RCLCPP_INFO(this->get_logger(), "Subscription LivoxInfo avviata");
 }

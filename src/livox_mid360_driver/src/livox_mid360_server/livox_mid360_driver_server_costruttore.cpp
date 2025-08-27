@@ -15,6 +15,7 @@
 
 static constexpr int PUB_PERIOD_MS =5;
 static constexpr int PUB_PERIOD_MS_IMU =1000;
+static constexpr int PUB_PERIOD_MS_INFO =5000;
 
 
 Mid360_Server::Mid360_Server()
@@ -31,27 +32,36 @@ Mid360_Server::Mid360_Server()
 
   RCLCPP_INFO(this->get_logger(), "Server initialized");  // Log di avvenuta inizializzazione
 
-  //  Publisher PointCloud2
+  // 3) Publisher PointCloud2
   pc2_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/msg_MID360/PointCloud2", rclcpp::QoS(10));
   RCLCPP_INFO(this->get_logger(), "Publisher PointCloud2 avviato");
 
-  //  Publisher IMU
+  // 4) Publisher IMU
   imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(
     "/msg_MID360/IMU", rclcpp::QoS(10));
   RCLCPP_INFO(this->get_logger(), "Publisher IMU avviato");
 
-  //  Timer PC2
+    // 5) Publisher LivoxInfo
+  info_pub_ = this->create_publisher<livox_lidar_interfaces::msg::LivoxInfo>(
+    "/msg_MID360/INFO", rclcpp::QoS(10));
+  RCLCPP_INFO(this->get_logger(), "Publisher LivoxInfo avviato");
+
+  // 6) Timer PC2
   pub_timer_ = this->create_wall_timer(
     std::chrono::milliseconds(PUB_PERIOD_MS),
     std::bind(&Mid360_Server::on_pub_timer, this));
   RCLCPP_INFO(this->get_logger(), "Timer di publish impostato a %d ms", PUB_PERIOD_MS);
   
-  //  Timer IMU
+  // 6) Timer IMU
   pub_timer_IMU_ = this->create_wall_timer(
     std::chrono::milliseconds(PUB_PERIOD_MS_IMU),
     std::bind(&Mid360_Server::on_pub_timer_IMU, this));
   RCLCPP_INFO(this->get_logger(), "Timer di publish IMU impostato a %d ms", PUB_PERIOD_MS_IMU);
 
-
+  // 6) Timer INFO
+  pub_timer_INFO_ = this->create_wall_timer(
+    std::chrono::milliseconds(PUB_PERIOD_MS_INFO),
+    std::bind(&Mid360_Server::on_pub_timer_INFO, this));
+  RCLCPP_INFO(this->get_logger(), "Timer di publish INFOimpostato a %d ms", PUB_PERIOD_MS_INFO);
 }

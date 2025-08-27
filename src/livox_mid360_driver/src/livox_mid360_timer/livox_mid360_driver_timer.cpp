@@ -127,3 +127,43 @@ void Mid360_Server::on_pub_timer_IMU()
 
 
 }
+
+void Mid360_Server::on_pub_timer_INFO()
+{
+  //printf("\n**************     INFO SEND    *****************\n");
+
+  livox_lidar_interfaces::msg::LivoxInfo info_msg;
+  
+  //auto self = static_cast<Mid360_Server*>(client_data);
+  
+  printf("dev_type=%d\n",this->send_info_msg.lidar_info.dev_type);
+  printf("serial_number=%s\n",this->send_info_msg.lidar_info.sn);
+  printf("lidar_ip_address= %s\n",this->send_info_msg.lidar_info.lidar_ip);
+  printf("Point Data Type (valore numerico): %d\n", (int)this->send_info_msg.point_data_type);
+  printf("Scan Pattern (valore numerico): %d\n", (int)this->send_info_msg.scan_pattern);
+  printf("Frame Rate (valore numerico): %d\n", (int)this->send_info_msg.point_frame_rate);
+  printf("Work Mode (valore numerico): %d\n", (int)this->send_info_msg.work_mode);
+  
+  info_msg.serial_number = std::string(this->send_info_msg.lidar_info.sn);
+  info_msg.lidar_ip_address = std::string(this->send_info_msg.lidar_info.lidar_ip);
+  info_msg.device_type = this->send_info_msg.lidar_info.dev_type;
+  info_msg.point_data_type = std::to_string((int)this->send_info_msg.point_data_type);
+  info_msg.scan_pattern = std::to_string((int)this->send_info_msg.scan_pattern);
+  info_msg.frame_rate = (int)this->send_info_msg.point_frame_rate;
+  info_msg.work_mode = std::to_string((int)this->send_info_msg.work_mode);
+  
+  /*
+  info_msg.serial_number = this->info_livox ? 
+                         std::string(this->info_livox) : 
+                         "";
+
+  info_msg.lidar_ip_address = (this->info_addr.s_addr != 0) ?
+                            std::string(inet_ntoa(this->info_addr)) : "";*/
+                            
+  //info_msg;
+
+
+  //pubblicazione
+  info_pub_->publish(info_msg);
+
+}

@@ -17,7 +17,42 @@
 #include <vector>
 
 
+struct LidarInternalParams {
+  std::string serial_number;
+  std::string product_info;
+  std::string mac_address;
 
+  std::string version_app;
+  std::string version_loader;
+  std::string version_hw;
+
+  std::string ip;
+  std::string mask;
+  std::string gateway;
+
+  uint8_t work_mode = 0;
+  uint8_t imu_enabled = 0;
+
+  float temperature = 0.0f;
+  uint32_t powerup_count = 0;
+
+  uint64_t local_time = 0;
+  uint64_t last_sync_time = 0;
+};
+
+struct info_msg{
+
+   LivoxLidarSdkVer sdk_version;
+   LivoxLidarInfo lidar_info;
+   //LivoxLidarDeviceType device_type;
+   std::string device_type_str;
+   int device_type_int;
+   LivoxLidarPointDataType point_data_type;
+   LivoxLidarScanPattern scan_pattern;
+   LivoxLidarPointFrameRate point_frame_rate;
+   LivoxLidarWorkMode work_mode;
+
+};
 
 void PointCloudCallback(uint32_t handle, const uint8_t dev_type,
                         LivoxLidarEthernetPacket* data, void* client_data);
@@ -54,6 +89,9 @@ public:
   uint8_t current_frame_cnt_{255}; // valore iniziale "impossibile"
   bool frame_ready_{false};
 
+   info_msg send_info_msg;
+    LidarInternalParams last_params_{};
+
 private:
 
 
@@ -79,10 +117,12 @@ private:
   // --- timer per publish (se serve) ---
   rclcpp::TimerBase::SharedPtr pub_timer_;
   rclcpp::TimerBase::SharedPtr pub_timer_IMU_;
+  rclcpp::TimerBase::SharedPtr pub_timer_INFO_;
   
 
   void on_pub_timer();
   void on_pub_timer_IMU();
+  void on_pub_timer_INFO();
  
   
 };
@@ -114,6 +154,7 @@ private:
     // subscriptions
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pc2_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr           imu_sub_;
+  rclcpp::Subscription<livox_lidar_interfaces::msg::LivoxInfo>::SharedPtr info_sub_;
 
   /// Handle al client ROS2 (shared pointer)
   rclcpp::Client<MsgEnableDisable>::SharedPtr client_;
@@ -121,6 +162,7 @@ private:
     // callback
   void pc2Callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void infoCallback(const livox_lidar_interfaces::msg::LivoxInfo::SharedPtr msg);
 
 
 };
