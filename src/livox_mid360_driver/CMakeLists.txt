@@ -42,6 +42,7 @@ add_executable(server
   src/livox_mid360_server/livox_mid360_driver_server_services.cpp
   src/livox_mid360_server/livox_mid360_driver_server_PC2_IMU.cpp
   src/livox_mid360_timer/livox_mid360_driver_timer.cpp
+  src/livox_mid360_server/livox_mid360_driver_server_autostart.cpp
 
 )
 
@@ -95,6 +96,10 @@ install(TARGETS client
 install(
   DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
+)
+install(
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
 )
 
 if(BUILD_TESTING)

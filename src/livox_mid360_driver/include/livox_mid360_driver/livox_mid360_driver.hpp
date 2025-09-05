@@ -57,7 +57,9 @@ public:
 private:
 
 
-
+  bool autostart_;                 
+  std::string livox_cfg_path_;
+  
   /// Handle al servizio ROS2 (shared pointer)
   rclcpp::Service<MsgEnableDisable>::SharedPtr server_;
 
@@ -70,6 +72,9 @@ private:
   void Mid360_Enable_Disable_clbk(
     const MsgEnableDisable::Request::SharedPtr request,
     const MsgEnableDisable::Response::SharedPtr response);
+
+  void Mid360_autostart();
+
 
   // --- publisher ROS2 ---
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc2_pub_;

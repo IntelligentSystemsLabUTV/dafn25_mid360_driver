@@ -32,15 +32,10 @@ void Mid360_Server::Mid360_Enable_Disable_clbk(
   std::string pkg_share =
     ament_index_cpp::get_package_share_directory("livox_mid360_driver");
 
-  // Componi il path assoluto al JSON
-  std::string cfg_path = pkg_share + "/config/mid360_config.json";
-
   if (request->command == 1) {
-    RCLCPP_INFO(get_logger(), "[Service] Enable");  // Log comando di ENABLE
-
-    
+ 
     // Inizializza il driver Livox con il file di configurazione
-    if (!LivoxLidarSdkInit(cfg_path.c_str())) {
+    if (!LivoxLidarSdkInit(this->livox_cfg_path_.c_str())) {
       printf("Livox Init Failed\n");  // Stampa errore in console se fallisce
       LivoxLidarSdkUninit();         // Pulizia del driver
     }

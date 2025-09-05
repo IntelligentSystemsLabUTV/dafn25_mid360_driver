@@ -20,6 +20,36 @@ static constexpr int PUB_PERIOD_MS_IMU =1000;
 Mid360_Server::Mid360_Server()
 : Node("server") // Costruzione del nodo ROS2 con nome "server"
 {
+
+
+  //MODIFICA 
+  this->declare_parameter<bool>("autostart", false);
+  this->declare_parameter<std::string>("livox_cfg_path", "");
+
+  bool autostart;
+  std::string livox_cfg_path;
+  this->get_parameter("autostart", autostart);
+  this->get_parameter("livox_cfg_path", livox_cfg_path);
+
+  RCLCPP_INFO(this->get_logger(), "Parametro autostart = %s", autostart ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "Parametro livox_cfg_path = %s", livox_cfg_path.c_str());
+
+
+  // 3. Inizializzazione SDK con livox_cfg_path (esempio)
+  if (!livox_cfg_path.empty()) {
+    // qui chiami l’SDK passando il JSON config
+    // es: LivoxLidarSdkInit(livox_cfg_path.c_str());
+    RCLCPP_INFO(this->get_logger(), "SDK inizializzato con config: %s", livox_cfg_path.c_str());
+  } else {
+    RCLCPP_WARN(this->get_logger(), "Nessun livox_cfg_path specificato!");
+  }
+
+  this -> livox_cfg_path_=livox_cfg_path;
+  this -> autostart_=autostart;
+  //FINE MODIFICA
+
+
+
   // Creazione del servizio /msg/Mid360_Server, legato al callback Mid360_Enable_Disable_clbk
   server_ = this->create_service<MsgEnableDisable>(
     "/msg/Mid360_Server",
@@ -52,6 +82,31 @@ Mid360_Server::Mid360_Server()
     std::chrono::milliseconds(PUB_PERIOD_MS_IMU),
     std::bind(&Mid360_Server::on_pub_timer_IMU, this));
   RCLCPP_INFO(this->get_logger(), "Timer di publish IMU impostato a %d ms", PUB_PERIOD_MS_IMU);
+
+
+  // if (autostart){
+  //     RCLCPP_INFO(get_logger(), "\nAutostart ON\n");  // Log comando di ENABLE
+  //     // Inizializza il driver Livox con il file di configurazione
+  //   if (!LivoxLidarSdkInit(this->livox_cfg_path_.c_str())) {
+  //     printf("Livox Init Failed\n");  // Stampa errore in console se fallisce
+  //     LivoxLidarSdkUninit();         // Pulizia del driver
+  //   }
+  //   LivoxLidarSdkStart();
+    
+
+  //   // pointCloud
+  //   SetLivoxLidarPointCloudCallBack(PointCloudCallback, this);
+  //   // IMU
+  //   SetLivoxLidarImuDataCallback(ImuDataCallback, this);
+    
+  //   RCLCPP_INFO(get_logger(), "[Service] Enable");  // Log comando di ENABLE
+
+  // }
+  if(autostart){
+    Mid360_autostart();
+  }
+
+
 
 
 }
