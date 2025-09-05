@@ -57,7 +57,9 @@ public:
 private:
 
 
-
+  bool autostart_;                 
+  std::string livox_cfg_path_;
+  
   /// Handle al servizio ROS2 (shared pointer)
   rclcpp::Service<MsgEnableDisable>::SharedPtr server_;
 
@@ -71,19 +73,16 @@ private:
     const MsgEnableDisable::Request::SharedPtr request,
     const MsgEnableDisable::Response::SharedPtr response);
 
+  void Mid360_autostart();
+
+
+public:
+
+  
   // --- publisher ROS2 ---
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc2_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr        imu_pub_;
   rclcpp::Publisher<livox_lidar_interfaces::msg::LivoxInfo>::SharedPtr info_pub_;
-
-  // --- timer per publish (se serve) ---
-  rclcpp::TimerBase::SharedPtr pub_timer_;
-  rclcpp::TimerBase::SharedPtr pub_timer_IMU_;
-  
-
-  void on_pub_timer();
-  void on_pub_timer_IMU();
- 
   
 };
 

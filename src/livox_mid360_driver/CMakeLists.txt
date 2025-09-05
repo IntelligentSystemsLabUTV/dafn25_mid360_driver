@@ -41,7 +41,7 @@ add_executable(server
   src/livox_mid360_driver_server_main.cpp
   src/livox_mid360_server/livox_mid360_driver_server_services.cpp
   src/livox_mid360_server/livox_mid360_driver_server_PC2_IMU.cpp
-  src/livox_mid360_timer/livox_mid360_driver_timer.cpp
+  src/livox_mid360_server/livox_mid360_driver_server_autostart.cpp
 
 )
 
@@ -69,7 +69,6 @@ add_executable(client
   src/livox_mid360_client/livox_mid360_driver_client_services.cpp
   src/livox_mid360_driver_client_main.cpp
   src/livox_mid360_client/livox_mid360_driver_client_costruttore.cpp
-  src/livox_mid360_timer/livox_mid360_driver_timer.cpp
 )
 target_include_directories(client PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -95,6 +94,10 @@ install(TARGETS client
 install(
   DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
+)
+install(
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
 )
 
 if(BUILD_TESTING)
